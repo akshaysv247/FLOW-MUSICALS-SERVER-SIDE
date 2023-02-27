@@ -4,7 +4,7 @@ const router = express.Router();
 
 const { artistSignup, artistLogin } = require('../controllers/artistAuthentication');
 
-router.post('/artistSignup', artistSignup);
-router.post('/artistLogin', artistLogin);
+router.post('/signup', artistSignup);
+router.post('/login', artistLogin);
 
 module.exports = router;

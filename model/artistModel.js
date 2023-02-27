@@ -1,6 +1,4 @@
 const mongoose = require('mongoose');
-const joi = require('joi');
-const passwordComplexity = require('joi-password-complexity');
 
 const ArtistSchema = new mongoose.Schema({
   name: {
@@ -13,7 +11,7 @@ const ArtistSchema = new mongoose.Schema({
     unique: true,
   },
   phone: {
-    type: Number,
+    type: String,
     required: true,
   },
   password: {
@@ -34,34 +32,26 @@ const ArtistSchema = new mongoose.Schema({
   },
   followers: {
     type: Array,
+    default: [],
   },
-  albums: {
+  playlists: {
     type: [String],
     default: [],
   },
   profilePic: {
     type: String,
   },
-
+  isBlocked: {
+    type: Boolean,
+    default: false,
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
 }, {
   timestamps: true,
 });
 
-const validate = (artist) => {
-  const schema = joi.object({
-    name: joi.string().required(),
-    email: joi.string().required(),
-    phone: joi.number().required(),
-    password: passwordComplexity().required(),
-    languages: joi.array().items(joi.string()).allow(''),
-    songs: joi.array().items(joi.string()).allow(''),
-    likedSongs: joi.array().items(joi.string()).allow(''),
-    followers: joi.array().items(joi.number()).allow(null),
-    albums: joi.array().items(joi.string()).allow(''),
-    profilePic: joi.string().allow(''),
-  });
-  schema.validate(artist);
-};
-
 const artistModel = mongoose.model('ArtistSchema', ArtistSchema);
-module.exports = { artistModel, validate };
+module.exports = artistModel;

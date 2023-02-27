@@ -1,3 +1,4 @@
+/* eslint-disable no-else-return */
 const validator = require('validator');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -5,91 +6,80 @@ const ArtistModel = require('../model/artistModel');
 
 module.exports = {
 
+  // eslint-disable-next-line consistent-return
   artistSignup: async (req, res) => {
-    // console.log(req.body);
     try {
+      // console.log(req.body);
       const {
-        name,
-        email,
-        phone,
-        password,
-      } = req.body;
+        name, email, phone, password,
+      } = req.body.data;
       if (name && email && phone && password) {
-        // validation
         if (!validator.isEmail(email)) {
-          return res
-            .status(200)
-            .send({ message: 'Email is not Valid', success: false });
+          return res.status(400).send({ message: 'Invalid email', success: false });
         }
         if (!validator.isStrongPassword(password)) {
           return res
-            .status(200)
-            .send({ message: 'Password is not Strong', success: false });
+            .status(400)
+            .send({ message: 'Invalid password please check your password', success: false });
         }
-        const existArtist = await ArtistModel.findOne({ email: req.body.email });
+        // eslint-disable-next-line object-shorthand
+        const existArtist = await ArtistModel.findOne({ email: email });
         if (existArtist) {
           return res
+            .status(400)
+            .send({ message: 'Artist already exists', success: false });
+        } else {
+          const salt = await bcrypt.genSalt(10);
+          const hashedPassword = await bcrypt.hash(password.trim(), salt);
+          const newArtist = new ArtistModel({
+            name,
+            email,
+            phone,
+            password: hashedPassword,
+          });
+          await newArtist.save();
+          return res
             .status(200)
-            .send({ message: 'Artist is Already exist', success: false });
+            .send({ message: 'Signed in successfully', success: true });
         }
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password.trim(), salt);
-        const newArtist = new ArtistModel({
-          // eslint-disable-next-line object-shorthand
-          name: name,
-          // eslint-disable-next-line object-shorthand
-          email: email,
-          // eslint-disable-next-line radix
-          phone: parseInt(phone),
-          password: hashedPassword,
-        });
-        await newArtist.save();
-        res
-          .status(201)
-          .send({ message: 'Sign up successfully', success: true });
       } else {
-        return res
-          .status(200)
-          .send({ message: 'All Fields must be filled', succes: false });
+        return res.status(400).send({ message: 'Please fill all the required fields', success: false });
       }
     } catch (error) {
-      // console.log(error)
+      console.log(error);
+      return res.status(500).send({ message: `artistSignup ${error.message}`, success: false });
     }
-    return null;
   },
+  // eslint-disable-next-line consistent-return
   artistLogin: async (req, res) => {
-    console.log(req.body);
     try {
-      if (!req.body) {
+      console.log(req.body);
+      const { email, password } = req.body;
+      if (email && password) {
+        const artist = await ArtistModel.findOne({ email });
+        if (artist) {
+          // console.log(artist);
+          const isMatch = await bcrypt.compare(password, artist.password);
+          if (isMatch) {
+            // eslint-disable-next-line no-underscore-dangle
+            const token = jwt.sign({ id: artist._id }, process.env.JWT_SECRETE, {
+              expiresIn: '1d',
+            });
+            return res
+              .status(201).send({
+                message: 'Login successful', success: true, token, artist,
+              });
+          }
+          return res.status(400).send({ message: 'Please enter the correct password', success: false });
+        }
         return res
-          .status(200)
-          .send({ message: 'Please fill the fields', success: false });
+          .status(400)
+          .send({ message: 'Artist not found', success: false });
       }
-      const artist = await ArtistModel.findOne({ email: req.body.email });
-      if (!artist) {
-        return res
-          .status(200)
-          .send({ message: 'Artist Does not exist', success: false });
-      }
-      const isMatch = await bcrypt.compare(req.body.password, artist.password);
-      if (isMatch) {
-        // eslint-disable-next-line no-underscore-dangle
-        const token = jwt.sign({ id: artist._id }, process.env.JWT_SECRETE, {
-          expiresIn: '1d',
-        });
-        res
-          .status(201)
-          .send({ message: 'Login successful', success: true, data: token });
-      } else {
-        return res
-          .status(200)
-          .send({ message: 'Error while Login', success: false });
-      }
-    } catch (err) {
-      res
-        .status(500)
-        .send({ message: 'Error while Login', success: false, err });
+      return res.status(200).send({ message: 'Please fill all the required fields', success: false });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: `artistLogin ${error.message}`, success: false });
     }
-    return null;
   },
 };
